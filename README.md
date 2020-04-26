@@ -1,16 +1,27 @@
-# flutterupyun
+#flutter_upyun
 
-A new Flutter application.
+>  纯Dart代码，调用又拍云Form API上传文件
 
-## Getting Started
+### 说明：
 
-This project is a starting point for a Flutter application.
+- upyun_utils
 
-A few resources to get you started if this is your first Flutter project:
+  又拍云签名工具类,依赖 intl: any 格式化时间
 
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
+- upyun_http
 
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+  基于Dio网络框架上传
+
+## 调用方式：
+
+`
+    UHttp.upload("/topic", imageFile, successCallBack: (data) {
+        Toast.show("上传成功");
+    }, errorCallBack: (error) {
+      Toast.show(error);
+    });
+
+`
+
+/topic  表示服务下面创建的文件夹目录，文件将会上传到该目录，当为 / 时，默认上传到服务的根目录
+

@@ -6,54 +6,61 @@ import 'package:flutterupyun/log_util.dart';
 import 'package:flutterupyun/upyun_utils.dart';
 
 class UHttp {
-//  String auth = UpYunUtils.getSign("PUT", uri, date, policy, md5);
   static Dio _dio;
 
   static Dio createInstance() {
     if (_dio == null) {
       _dio = Dio();
-      _dio.options.baseUrl = "https://v0.api.upyun.com";
+      _dio.options.baseUrl = UpUtils.UpYun_URL;
       _dio.options.receiveTimeout = 30000;
       _dio.options.connectTimeout = 30000;
     }
     return _dio;
   }
 
-  static Future upload(String url, List<File> files,
+  static Future upload(String url, File file,
       {Function successCallBack, Function errorCallBack}) async {
     String errorMsg = "";
     int statusCode;
     Response response;
-    if (null == files || files.isEmpty) {
+    if (null == file) {
       _handError(errorCallBack, errorMsg: "文件不能为空");
       return;
     }
     try {
       _dio = createInstance();
-      String date = UpYunUtils.getRfc1123Time();
-      _dio.options.headers.remove("content-type");
-      _dio.options.headers["Authorization"] =
-          UpYunUtils.getSign("PUT", url, date, "", "");
-      _dio.options.headers["Date"] = "$date";
-      String path = files[0].path;
+      DateTime dateTime = DateTime.now().toUtc();
+      String date = UpUtils.getRfc1123Time(dateTime);
+
+      String path = file.path;
       var name = path.substring(path.lastIndexOf("/") + 1, path.length);
+      var sufix = name.substring(name.lastIndexOf(".") + 1);
+
+      ///计算policy参数
+      Map<String, String> map = Map();
+      map["bucket"] = UpUtils.UpYun_BUCKET;
+      map["date"] = "$date";
+      map["expiration"] = UpUtils.getExpiration(dateTime);
+      map["save-key"] = "$url/${UpUtils.getUUID()}.$sufix";
+
+      String policy = UpUtils.getPolicy(map);
+      String sign =
+          UpUtils.getSign("POST", "/${UpUtils.UpYun_BUCKET}", date, policy, "");
+
+      ///封装body
+      List<MapEntry<String, String>> params = List();
+      params.add(MapEntry("policy", policy));
+      params.add(MapEntry("authorization", sign));
+      params.add(MapEntry("date", date));
+
+      ///添加文件
       FormData formData = FormData.fromMap({
-        "file": await MultipartFile.fromFile(path, filename: name)
+        "file": await MultipartFile.fromFile(path, filename: name),
       });
 
-//      for (var i = 0; i < files.length; i++) {
-//        File file = files[i];
-//        String path = file.path;
-//        var name = path.substring(path.lastIndexOf("/") + 1, path.length);
-//        formData.files.add(
-//            MapEntry("file", MultipartFile.fromFileSync(path, filename: name)));
-//      }
-      _dio.options.headers["Content-Length"] = formData.length;
-      _dio.options.headers["Content-Type"] = "image/jpg";
+      formData.fields.addAll(params);
       LogUtil.v("===============================================", tag: "Http");
-      LogUtil.v("请求地址：${_dio.options.baseUrl}$url", tag: "Http");
-      LogUtil.v("请求头：${_dio.options.headers}", tag: "Http");
-      response = await _dio.put(url, data: formData);
+      response = await _dio.post("/${UpUtils.UpYun_BUCKET}", data: formData);
       statusCode = response.statusCode;
       if (200 != statusCode) {
         LogUtil.v("请求出错：${response.statusMessage}");
@@ -64,13 +71,13 @@ class UHttp {
         successCallBack(json.encode(response.data));
       }
       LogUtil.v("请求响应：${response.data}", tag: "Http");
-      LogUtil.v("===============================================", tag: "Http");
     } on DioError catch (exception) {
       _handError(errorCallBack, error: exception);
     } catch (e) {
       LogUtil.e("未知异常:${e.toString()}", tag: "Http");
       _handError(errorCallBack, errorMsg: "请求出错");
     }
+    LogUtil.v("===============================================", tag: "Http");
   }
 
   static void _handError(Function errorCallback,
@@ -101,7 +108,7 @@ class UHttp {
     if (null != errorCallback) {
       errorCallback(message);
     }
-    LogUtil.v("请求出错：${error.toString()}",tag: "Http");
-    LogUtil.v("===============================================",tag: "Http");
+    LogUtil.v("请求出错：${error.toString()}", tag: "Http");
+    LogUtil.v("===============================================", tag: "Http");
   }
 }

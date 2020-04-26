@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:bot_toast/bot_toast.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutterupyun/UHttp.dart';
+import 'package:flutterupyun/upyun_http.dart';
 import 'package:flutterupyun/toast_utils.dart';
 import 'package:flutterupyun/upyun_utils.dart';
 import 'package:fsuper/fsuper.dart';
@@ -39,17 +39,13 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   //选择图片相关
-  List<Widget> list;
-  List<File> listPics;
-  List<String> fileList;
   double picWidth = 80;
   String encryp = "";
+  File imageFile;
 
   @override
   void initState() {
     super.initState();
-    list = List<Widget>()..add(_buildPicButton());
-    listPics = List<File>();
   }
 
   @override
@@ -62,14 +58,40 @@ class _MyHomePageState extends State<MyHomePage> {
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          Container(
-            margin: EdgeInsets.only(left: 20, right: 20),
+          FSuper(
+            margin: EdgeInsets.only(left: 20),
+            height: picWidth,
             width: double.infinity,
-            child: Wrap(
-              children: list,
-              spacing: 10,
-              runSpacing: 10,
+            child1: null == imageFile
+                ? Container(
+                    width: picWidth,
+                    height: picWidth,
+                    color: Color(0xffEEEEEE),
+                  )
+                : Image.file(
+                    imageFile,
+                    width: picWidth,
+                    height: picWidth,
+                    fit: BoxFit.cover,
+                  ),
+            child1Alignment: Alignment.centerLeft,
+            child2: Container(
+              width: picWidth,
+              height: picWidth,
+              color: Color(0xffEEEEEE),
+              child: Icon(
+                Icons.add,
+                color: Color(0xff999999),
+              ),
             ),
+            child2Margin: EdgeInsets.only(left: 20 + picWidth),
+            child2Alignment: Alignment.centerLeft,
+            onChild2Click: () {
+              setState(() {
+                imageFile = null;
+              });
+              _openAlbum();
+            },
           ),
           FSuper(
             text: "上传文件",
@@ -99,7 +121,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _upload() {
     CancelFunc cancelFunc = Toast.loading("上传中...");
-    UHttp.upload("/images-topic/topic", listPics, successCallBack: (data) {
+    UHttp.upload("/", imageFile, successCallBack: (data) {
       cancelFunc();
     }, errorCallBack: (error) {
       Toast.show(error);
@@ -107,111 +129,16 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  ///构建添加图片按钮
-  Widget _buildPicButton() {
-    return GestureDetector(
-      onTap: () {
-        if (listPics.length >= 3) {
-          Toast.show("最多可选3张图片");
-          return;
-        }
-        showModalBottomSheet(
-            backgroundColor: Colors.transparent,
-            context: context,
-            builder: (builder) {
-              return _choicePic();
-            });
-      },
-      child: Container(
-        width: picWidth,
-        height: picWidth,
-        color: Color(0xffEEEEEE),
-        child: Icon(
-          Icons.add,
-          color: Color(0xff999999),
-        ),
-      ),
-    );
-  }
-
-  ///选择图片对话框
-  Widget _choicePic() {
-    return Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-      Container(
-          width: double.maxFinite,
-          margin: EdgeInsets.all(10),
-          decoration: BoxDecoration(
-              color: Colors.white, borderRadius: BorderRadius.circular(6)),
-          child: Column(children: <Widget>[
-            FlatButton(onPressed: _openAlbum, child: Text('从相册中选择'))
-          ])),
-      Container(
-          width: double.maxFinite,
-          margin: EdgeInsets.only(left: 10, right: 10, bottom: 10),
-          decoration: BoxDecoration(
-              color: Colors.white, borderRadius: BorderRadius.circular(6)),
-          child: FlatButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('取消'),
-          ))
-    ]);
-  }
-
   ///打开相册
   Future _openAlbum() async {
     print('打开相册');
-    Navigator.pop(context);
     AssetPicker.pickAssets(context,
-            maxAssets: 3 - listPics.length,
-            themeColor: Theme.of(context).accentColor)
-        .then((List<AssetEntity> assets) {
-      assets.forEach((AssetEntity asset) async {
-        File image = (await asset.file);
-        listPics.add(image);
-        setState(() {
-          list.insert(list.length - 1, _buildPhoto(image));
-        });
+            maxAssets: 1, themeColor: Theme.of(context).accentColor)
+        .then((List<AssetEntity> assets) async {
+      File tmp = await assets.first.file;
+      setState(() {
+        imageFile = tmp;
       });
     });
-  }
-
-  ///构建图片
-  Widget _buildPhoto(File image) {
-    return Stack(
-        overflow: Overflow.visible,
-        alignment: Alignment(0.9, -0.9),
-        children: <Widget>[
-          Container(
-            width: picWidth,
-            height: picWidth,
-            child: Image.file(
-              image,
-              width: picWidth,
-              height: picWidth,
-              fit: BoxFit.cover,
-            ),
-          ),
-          GestureDetector(
-            onTap: () {
-              var index = listPics.indexOf(image);
-              setState(() {
-                listPics.removeAt(index);
-                list.removeAt(index);
-              });
-            },
-            child: Container(
-              width: 18,
-              height: 18,
-              decoration: BoxDecoration(
-                  color: Color(0x7f000000),
-                  borderRadius: BorderRadius.circular(9)),
-              child: Icon(
-                Icons.clear,
-                color: Colors.white,
-                size: 12,
-              ),
-            ),
-          )
-        ]);
   }
 }
