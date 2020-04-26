@@ -8,14 +8,13 @@ import 'package:intl/intl.dart';
 
 class UpUtils {
   ///操作员名称
-  static const UpYUN_KEY = "limh";
+  static const UpYUN_KEY = "操作员名称";
 
   ///操作员密钥
-  static const UpYUN_SECRET = "x07idNUQwaCAqSmSsTpGB2cBnCfpRgzK";
-//  static const UpYUN_SECRET = "操作员密码";
+  static const UpYUN_SECRET = "操作员密码";
 
   ///服务名称
-  static const UpYun_BUCKET = "chipapp";
+  static const UpYun_BUCKET = "xxxx";
 
   ///请求API接口地址，
   static const UpYun_URL = "https://v0.api.upyun.com";
